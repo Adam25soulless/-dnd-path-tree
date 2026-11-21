@@ -76,7 +76,7 @@ label.f .in{margin-top:4px;color:var(--tx);font-size:16px}
 .pill.bad b{color:#ffd0ca}
 .dot{width:14px;height:14px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px #15111a;align-self:center}
 .dot.bad{background:var(--bad);box-shadow:0 0 0 3px rgba(208,74,63,.3)}
-.tv{position:relative;height:calc(100dvh - 370px);min-height:340px;border:1px solid var(--line);border-radius:14px;background:#0d0a11;overflow:hidden;touch-action:none;cursor:grab}
+.tv{position:relative;height:calc(100dvh - 410px);min-height:300px;border:1px solid var(--line);border-radius:14px;background:#0d0a11;overflow:hidden;touch-action:none;cursor:grab}
 .tv svg{display:block;width:100%;height:100%;user-select:none;-webkit-user-select:none}
 .tv .tools{position:absolute;inset-block-end:10px;inset-inline-start:10px;display:flex;flex-direction:column;gap:6px;z-index:2}
 .ed{fill:none;stroke:var(--line);stroke-width:2.5}.ed.on{stroke:var(--gold);opacity:.55}
@@ -103,6 +103,24 @@ details.card[open] summary{margin-bottom:4px}
 .tag{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:0 10px;color:var(--mu)}
 .tag.new{border-color:var(--ok);color:#a9dcb3}.tag.mod{border-color:var(--gold);color:var(--gold2)}.tag.rm{border-color:var(--bad);color:#ffb3aa}
 input[type=checkbox]{width:22px;height:22px;accent-color:var(--gold)}
+
+.ge-box{height:calc(100dvh - 500px);min-height:300px}
+.ge .ln{fill:none;stroke:#6b5d78;stroke-width:2.5}.ge .hit{fill:none;stroke:transparent;stroke-width:24}.ge.sel .ln,.ge.hot .ln{stroke:var(--gold2);stroke-width:3.5}.ge.dim{opacity:.18}
+.gn{color:var(--c,var(--gold));cursor:pointer}.gn circle:first-child{fill:#16121b;stroke:var(--c,var(--gold));stroke-width:2.5}
+.gn.evo circle:first-child{fill:#2b2310;stroke-width:3.5}.gn .ring{fill:none;stroke:var(--gold);stroke-width:1.5;opacity:.6}
+.gn.sel circle:first-child{stroke-width:5;filter:drop-shadow(0 0 9px var(--c,var(--gold)))}.gn.bad circle:first-child{stroke:var(--bad);stroke-width:4}
+.gn.linking circle:first-child{stroke-dasharray:6 4}.gn.dim{opacity:.22}.gn text{fill:var(--tx);font:600 12px Cairo,sans-serif}
+.gn .mand{fill:var(--gold);stroke:#16121b;stroke-width:2}.gn .hd{fill:var(--gold2);stroke:#16121b;stroke-width:2;pointer-events:none}.gn .hdhit{fill:transparent;cursor:crosshair}
+.tmpl{pointer-events:none;fill:none;stroke:var(--gold2);stroke-width:3;stroke-dasharray:7 5}
+.gbar{display:none;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 8px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--s1)}.gbar .btn{font-size:13px;padding:2px 9px;min-height:34px}.tbar{flex-wrap:wrap;gap:6px}
+.btn.on{border-color:var(--gold);color:var(--gold2)}.btn.warn{border-color:var(--bad);color:#ffb3aa}
+
+.tv svg .ed{fill:none;stroke:#4a4052;stroke-width:2.5}.tv svg .ed.on{stroke:var(--gold);opacity:.8}
+.nd.locked{opacity:.4}.nd.locked circle:first-child{stroke-dasharray:2 5}
+.nd.evo circle:first-child{fill:#2b2310;stroke-width:3.5}.nd .ring2{fill:none;stroke:var(--gold);stroke-width:1.5;opacity:.6}.nd.sealed .ring2{stroke:var(--ok);stroke-width:2.5;opacity:.9}
+.nd .mand{fill:var(--gold);stroke:#16121b;stroke-width:2}
+.stg{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2a2230}.stg:last-child{border:0}
+.okc{color:#a9dcb3}
 </style>
 </head>
 <body>
@@ -315,7 +333,7 @@ function pocketSection(pk,id,own,reload){
   pk.items.length?pk.items.map(i=>entry({title:i.name,badge:'الوزن '+fmt(i.weight),desc:i.description,
    onEdit:i.can_edit?()=>editSheet('تعديل الغرض',{...L,name:i.name,num:i.weight,desc:i.description},async(name,num,desc)=>{await rpc('update_item',{p_item:i.id,p_name:name,p_weight:num,p_description:desc});toast('حُفظ الغرض.');await reload()}):null,
    onDel:i.can_edit?()=>confirmSheet('حذف الغرض «'+i.name+'»؟',async()=>{await rpc('delete_item',{p_item:i.id});toast('حُذف الغرض.');await reload()},'حذف'):null})):h('p',{class:'empty'},'الجيب فارغ.'))}
-/* ---- path tree (player view) ---- */
+/* ---- path graph (player view) ---- */
 const W_LEAF=104,H_LEVEL=132;
 function layoutTree(nodes){
  const ids=new Set(nodes.map(n=>n.id)),kids={},roots=[];
@@ -326,20 +344,29 @@ function layoutTree(nodes){
   pos[n.id]={x,y:d*H_LEVEL,n}};
  roots.forEach(r=>walk(r,0));
  const mx=Math.max(leaf-1,0)*W_LEAF;for(const id in pos)pos[id].x=mx-pos[id].x;
- return{pos,x0:-56,x1:Math.max(leaf-1,0)*W_LEAF+56,y0:-44,y1:maxD*H_LEVEL+72}}
+ return{pos,x0:-56,x1:mx+56,y0:-44,y1:maxD*H_LEVEL+72}}
 const nodeIcon=i=>i==='points'?ICON.star:i==='health'?ICON.heart:i==='question'?ICON.q:ICON[i]||ICON.star;
 const nodeColor=i=>({str:'var(--str)',dex:'var(--dex)',con:'var(--con)',int:'var(--int)',wis:'var(--wis)',cha:'var(--cha)'}[i]||'var(--gold)');
 const shortName=s=>s.length>13?s.slice(0,12)+'…':s;
-function treeMarkup(pos){
- let ed='',nd='';
- for(const id in pos){const p=pos[id],n=p.n,q=n.parent_id&&pos[n.parent_id];
-  if(q)ed+=`<path class="ed${n.state==='purchased'?' on':''}" d="M${q.x} ${q.y+30}C${q.x} ${(q.y+p.y)/2} ${p.x} ${(q.y+p.y)/2} ${p.x} ${p.y-30}"/>`;
-  nd+=`<g class="nd ${n.state}${n.can_buy?' buy':''}" data-id="${esc(n.id)}" transform="translate(${p.x} ${p.y})" style="--c:${nodeColor(n.icon)}" role="button" aria-label="${esc(n.name)}"><circle r="28"/>${n.state==='purchased'?'<circle class="ring" r="34"/>':''}<g transform="translate(-14 -14) scale(1.16)" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${nodeIcon(n.icon)}</g><text y="52" text-anchor="middle">${esc(shortName(n.name))}</text></g>`}
+const rad=n=>n.kind==='evolution'?34:28;
+function planTree(T){
+ const pos={};
+ if(T.nodes.some(n=>n.x==null||n.y==null)){const L=layoutTree(T.nodes.map(n=>({id:n.id,parent_id:n.parent_id,name:n.name,icon:n.icon})));T.nodes.forEach(n=>{const p=L.pos[n.id];pos[n.id]={x:p?p.x:0,y:p?p.y:0,n}})}
+ T.nodes.forEach(n=>{if(n.x!=null&&n.y!=null)pos[n.id]={x:+n.x,y:+n.y,n}});
+ const xs=Object.values(pos).map(p=>p.x),ys=Object.values(pos).map(p=>p.y);
+ return{pos,x0:Math.min(0,...xs)-70,x1:Math.max(0,...xs)+70,y0:Math.min(0,...ys)-60,y1:Math.max(0,...ys)+90}}
+function treeMarkup(T,pos){
+ let ed='',nd='';const sealed=new Set((T.stages||[]).filter(s=>s.sealed).map(s=>s.id));
+ for(const e of T.edges||[]){const a=pos[e.from],b=pos[e.to];if(!a||!b)continue;
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d,x1=a.x+ux*rad(a.n),y1=a.y+uy*rad(a.n),x2=b.x-ux*(rad(b.n)+7),y2=b.y-uy*(rad(b.n)+7),my=(y1+y2)/2;
+  ed+=`<path class="ed${e.active?' on':''}" d="M${x1} ${y1}C${x1} ${my} ${x2} ${my} ${x2} ${y2}" marker-end="url(#${e.active?'tars':'tar'})"/>`}
+ for(const id in pos){const p=pos[id],n=p.n,evo=n.kind==='evolution',r=rad(n);
+  nd+=`<g class="nd ${n.state}${n.can_buy?' buy':''}${evo?' evo':''}${evo&&n.state==='purchased'&&sealed.has(n.id)?' sealed':''}" data-id="${esc(n.id)}" transform="translate(${p.x} ${p.y})" style="--c:${evo?'var(--gold)':nodeColor(n.icon)}" role="button" aria-label="${esc(n.name)}"><circle r="${r}"/>${n.state==='purchased'&&!evo?`<circle class="ring" r="${r+6}"/>`:''}${evo?`<circle class="ring2" r="${r+6}"/>`:''}${n.mandatory?`<circle class="mand" cx="${r-4}" cy="${-r+4}" r="6"/>`:''}<g transform="translate(-14 -14) scale(1.16)" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${nodeIcon(n.icon)}</g><text y="${r+20}" text-anchor="middle">${esc(shortName(n.name))}</text></g>`}
  return ed+nd}
 function panZoom(box,g,st,onTap){
  const pts=new Map();let moved=0,down=null;
  const apply=()=>g.setAttribute('transform',`translate(${st.x} ${st.y}) scale(${st.k})`);
- const zoomAt=(mx,my,f)=>{const k=Math.max(.25,Math.min(2.5,st.k*f)),r=k/st.k;st.x=mx-(mx-st.x)*r;st.y=my-(my-st.y)*r;st.k=k;apply()};
+ const zoomAt=(mx,my,f)=>{const k=Math.max(.2,Math.min(2.5,st.k*f)),r=k/st.k;st.x=mx-(mx-st.x)*r;st.y=my-(my-st.y)*r;st.k=k;apply()};
  box.addEventListener('pointerdown',e=>{if(e.target.closest('.tools'))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pts.size===1){moved=0;const t=e.target.closest('[data-id]');down=t?t.dataset.id:null}else{down=null;moved=99}try{box.setPointerCapture(e.pointerId)}catch(_){}});
  box.addEventListener('pointermove',e=>{const p=pts.get(e.pointerId);if(!p)return;
   if(pts.size===1){const dx=e.clientX-p.x,dy=e.clientY-p.y;st.x+=dx;st.y+=dy;moved+=Math.abs(dx)+Math.abs(dy);apply()}
@@ -350,36 +377,40 @@ function panZoom(box,g,st,onTap){
  box.addEventListener('wheel',e=>{e.preventDefault();const r=box.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:.89)},{passive:false});
  return{apply,zoomAt}}
 route(/^\/tree$/,async()=>{
- let T=await rpc('get_tree'),L=layoutTree(T.nodes),last=JSON.stringify(T);
+ let T=await rpc('get_tree'),L=planTree(T),last=JSON.stringify(T);
  const st={x:0,y:0,k:1};
- const box=h('div',{class:'tv'});box.innerHTML='<svg role="group" aria-label="شجرة المسار"><g></g></svg>';
- const g=box.querySelector('g'),svg=box.querySelector('svg');
- const bal=h('b',null),hint=h('p',{class:'muted sm',style:'margin:8px 0 0'});
- const fit=()=>{const r=box.getBoundingClientRect(),w=L.x1-L.x0;st.k=Math.min(1.1,(r.width-16)/w);st.x=(r.width-w*st.k)/2-L.x0*st.k;st.y=16-L.y0*st.k;pz.apply()};
- const draw=()=>{g.innerHTML=treeMarkup(L.pos);bal.textContent=T.path_points;
-  hint.textContent=!T.nodes.length?'لم ينشر DMaster شجرة المسار بعد.':!T.has_path?'اختر أحد الخيارات الأولية ليصبح مسارك الأساسي.':'المشتريات تبقى ظاهرة، والمتاح أمامك محاط بخط منقط.'};
+ const box=h('div',{class:'tv'});box.innerHTML='<svg role="group" aria-label="شجرة المسار"><defs><marker id="tar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4a4052"/></marker><marker id="tars" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c9a24b"/></marker></defs><g></g></svg>';
+ const g=box.querySelector('svg > g'),bal=h('b'),hint=h('p',{class:'muted sm',style:'margin:8px 0 0'}),stg=h('div');
+ const fit=()=>{const r=box.getBoundingClientRect(),w=L.x1-L.x0,hh=L.y1-L.y0;st.k=Math.max(.25,Math.min(1.1,(r.width-16)/w,(r.height-16)/hh));st.x=(r.width-w*st.k)/2-L.x0*st.k;st.y=(r.height-hh*st.k)/2-L.y0*st.k;pz.apply()};
+ const draw=()=>{g.innerHTML=treeMarkup(T,L.pos);bal.textContent=T.path_points;
+  const av=T.nodes.some(n=>n.state==='available');
+  hint.textContent=!T.nodes.length?'لم ينشر DMaster شجرة المسار بعد.':!T.has_path?'اختر أحد التطورات الأولى لتبدأ مسارك. الاختيار نهائي.':!av?'لا توجد خيارات متاحة الآن. سيظهر الجديد حين يضيفه DMaster.':'المتاح محاط بخط منقط، وما تقدر على شراءه يتوهج. الذهبي تطورات مسارية.';
+  stg.replaceChildren(...(T.stages||[]).map(s=>h('div',{class:'stg'},h('b',{class:'sp'},s.name),s.sealed?h('span',{class:'okc'},'✔ مرحلة مختومة'):h('span',{class:'muted sm'},'الإلزامي '+s.mandatory_done+' / '+s.mandatory_total))))};
  const open=id=>{const n=T.nodes.find(x=>x.id===id);if(!n)return;
-  const bought=n.state==='purchased',reward=n.icon==='skill'?null:n.reward_text;
-  const buy=h('button',{class:'btn gold',style:'flex:1',type:'button',disabled:bought||!n.can_buy},bought?'تم الشراء':n.can_buy?'شراء':'نقاطك لا تكفي');
-  const copy=(n.icon==='skill'||n.icon==='question')&&n.description?copyBtn(n.description):null;
+  const evo=n.kind==='evolution',bought=n.state==='purchased',locked=n.state==='locked';
+  const srcs=T.edges.filter(e=>e.to===n.id).map(e=>T.nodes.find(x=>x.id===e.from)).filter(Boolean);
+  const buy=h('button',{class:'btn gold',style:'flex:1',type:'button',disabled:bought||locked||!n.can_buy},bought?(evo?'تم الاختيار':'تم الشراء'):locked?'مقفل':n.can_buy?(evo?'اختيار هذا التطور':'شراء'):'نقاطك لا تكفي');
+  const copy=!evo&&(n.icon==='skill'||n.icon==='question')&&n.description?copyBtn(n.description):null;
+  const rewardLine=!evo&&n.icon!=='skill'?n.reward_text:null;
   const sh=sheet(n.name,h('div',null,
-   h('div',{class:'row',style:'margin-bottom:6px'},h('div',{class:'sigil',style:'--c:'+nodeColor(n.icon)+';margin:0;width:52px;height:52px',html:ic(nodeIcon(n.icon),26)}),h('div',{class:'sp'},reward?h('b',null,reward):null,h('div',{class:'muted sm'},bought?'مشترى':'غير مشترى'))),
-   n.icon==='skill'?h('div',{class:'rw'},h('div',null,h('b',null,n.skill_name),' · المُعدل ',fmt(n.skill_modifier)),n.description?h('p',{class:'ds'},n.description):null):null,
-   n.icon==='question'&&n.description?h('div',{class:'rw'},h('p',{class:'ds',style:'margin:0'},n.description)):null,
-   h('p',{class:'muted',style:'margin:8px 0 12px'},(bought?'السعر المدفوع: ':'السعر: ')+n.price+' نقطة شجرة'),
+   h('div',{class:'row',style:'margin-bottom:6px'},h('div',{class:'sigil',style:'--c:'+(evo?'var(--gold)':nodeColor(n.icon))+';margin:0;width:52px;height:52px',html:ic(nodeIcon(n.icon),26)}),h('div',{class:'sp'},rewardLine?h('b',null,rewardLine):null,h('div',{class:'muted sm'},(evo?'تطور مساري · ':'')+(bought?'مشترى':locked?'مقفل':'غير مشترى')+(n.mandatory?' · إلزامي لختم المرحلة':!evo?' · اختياري':'')))),
+   !evo&&n.icon==='skill'?h('div',{class:'rw'},h('div',null,h('b',null,n.skill_name),' · المُعدل ',fmt(n.skill_modifier)),n.description?h('p',{class:'ds'},n.description):null):null,
+   (evo||n.icon==='question')&&n.description?h('div',{class:'rw'},h('p',{class:'ds',style:'margin:0'},n.description)):null,
+   locked?h('p',{class:'muted'},srcs.length?'يُفتح بشراء أحد: '+srcs.map(x=>x.name).join('، ')+'.':'يُفتح بشراء انبثاق سابق متصل به.'):null,
+   evo&&!bought?h('p',{class:'muted sm'},'اختيار واحد فقط من هذه الخيارات، ولا يمكن تغييره بعد التأكيد.'):null,
+   h('p',{class:'muted',style:'margin:8px 0 12px'},bought?(n.price?'السعر المدفوع: '+n.price+' نقطة شجرة':'اختيار مجاني'):(n.price?'السعر: '+n.price+' نقطة شجرة':'اختيار مجاني')),
    h('div',{class:'row',style:'gap:8px'},buy,copy)));
-  buy.addEventListener('click',()=>act(buy,async()=>{const r=await rpc('purchase_node',{p_node:n.id});T=r.tree;L=layoutTree(T.nodes);last=JSON.stringify(T);draw();sh.close();toast('تم الشراء'+(n.reward_text?': '+n.reward_text:'')+'.')}))};
+  const doBuy=async()=>{const r=await rpc('purchase_node',{p_node:n.id});T=r.tree;L=planTree(T);last=JSON.stringify(T);draw();toast(evo?'تم اختيار «'+n.name+'».':'تم الشراء'+(n.reward_text?': '+n.reward_text:'')+'.')};
+  buy.addEventListener('click',()=>{if(evo){sh.close();confirmSheet('تأكيد اختيار «'+n.name+'»؟ هذا الاختيار نهائي، ولن تتمكن من اختيار غيره من هذه الخيارات.',doBuy,'تأكيد الاختيار')}else act(buy,async()=>{await doBuy();sh.close()})})};
  const pz=panZoom(box,g,st,open);
- const tool=(t,l,f)=>h('button',{class:'btn sm',type:'button','aria-label':l,onclick:f},t);
- const r0=()=>box.getBoundingClientRect();
- box.append(h('div',{class:'tools'},tool('+','تكبير',()=>pz.zoomAt(r0().width/2,r0().height/2,1.25)),tool('−','تصغير',()=>pz.zoomAt(r0().width/2,r0().height/2,.8)),tool('⤢','ملاءمة الشجرة',fit)));
- view(h('div',null,
-  h('div',{class:'card'},h('div',{class:'row'},h('h2',{class:'sp'},'شجرة المسار'),h('span',{class:'pill'},'نقاطك: ',bal)),hint),box));
+ const tool=(t,l,f)=>h('button',{class:'btn sm',type:'button','aria-label':l,onclick:f},t),r0=()=>box.getBoundingClientRect();
+ const zoomRow=h('div',{class:'row',style:'gap:6px;margin-top:10px'},tool('+','تكبير',()=>pz.zoomAt(r0().width/2,r0().height/2,1.25)),tool('−','تصغير',()=>pz.zoomAt(r0().width/2,r0().height/2,.8)),tool('⤢ ملاءمة','ملاءمة الشجرة',fit));
+ view(h('div',null,h('div',{class:'card'},h('div',{class:'row'},h('h2',{class:'sp'},'شجرة المسار'),h('span',{class:'pill'},'نقاطك: ',bal)),hint,stg,zoomRow),box));
  draw();requestAnimationFrame(fit);
- watch(async()=>{const n=await rpc('get_tree');const j=JSON.stringify(n);if(j!==last){T=n;L=layoutTree(T.nodes);last=j;draw()}},20000)});
+ watch(async()=>{const n=await rpc('get_tree');const j=JSON.stringify(n);if(j!==last){T=n;L=planTree(T);last=j;draw()}},20000)});
 /* ---- admin: player tools + panel ---- */
-Object.assign(ERR,{has_children:'لا يمكن حذف انبثاق له أبناء. انقل الأبناء أو احذفهم أولًا.',cycle:'هذا النقل يجعل الانبثاق ابنًا لنفسه أو لأحد أبنائه.',invalid_parent:'الانبثاق الأب غير صالح.',invalid_reward:'بيانات المكافأة غير مكتملة لهذا النوع.',invalid_icon:'نوع الأيقونة غير صالح.',invalid_price:'السعر غير صالح.',pending_delete:'هذا الانبثاق مجدول للحذف. تراجع عن الحذف أولًا.',orphan_node:'لا يمكن النشر: يوجد انبثاق أبوه محذوف أو غير منشور.',negative_balance:'الرصيد لا يقبل قيمة سالبة.',invalid_value:'القيمة غير صالحة.',invalid_rank:'الأحقية من 1 إلى 10.',invalid_ids:'ترتيب غير صالح.',invalid_modifier:'المُعدل غير صالح.',invalid_weight:'الوزن غير صالح.',invalid_delta:'أدخل قيمة غير صفرية.',unknown_field:'حقل غير معروف.'});
-const ACT_LABEL={set_player_name:'تغيير اسم لاعب',set_floor:'تغيير الطابق',set_registration:'فتح/إغلاق التسجيل',set_eligibility:'تغيير الأحقية',set_stat:'تعديل إحصائية',set_balance:'تعديل رصيد',set_default_base_stat:'القيمة الابتدائية للإحصائيات',create_node:'إنشاء انبثاق',update_node:'تعديل انبثاق',delete_node:'حذف انبثاق',discard_pending:'تراجع عن تعديل',reorder_nodes:'إعادة ترتيب',publish_tree:'نشر الشجرة',add_skill:'إضافة مهارة',update_skill:'تعديل مهارة',delete_skill:'حذف مهارة',add_item:'إضافة غرض',update_item:'تعديل غرض',delete_item:'حذف غرض',export_backup:'نسخة احتياطية'};
+Object.assign(ERR,{has_children:'لا يمكن حذف انبثاق له أبناء. انقل الأبناء أو احذفهم أولًا.',cycle:'هذا النقل يجعل الانبثاق ابنًا لنفسه أو لأحد أبنائه.',invalid_parent:'الانبثاق الأب غير صالح.',invalid_reward:'بيانات المكافأة غير مكتملة لهذا النوع.',invalid_icon:'نوع الأيقونة غير صالح.',invalid_price:'السعر غير صالح.',pending_delete:'هذا الانبثاق مجدول للحذف. تراجع عن الحذف أولًا.',orphan_node:'لا يمكن النشر: يوجد انبثاق أبوه محذوف أو غير منشور.',negative_balance:'الرصيد لا يقبل قيمة سالبة.',invalid_value:'القيمة غير صالحة.',invalid_rank:'الأحقية من 1 إلى 10.',invalid_ids:'ترتيب غير صالح.',invalid_modifier:'المُعدل غير صالح.',invalid_weight:'الوزن غير صالح.',invalid_delta:'أدخل قيمة غير صفرية.',unknown_field:'حقل غير معروف.',invalid_request:'تعذّر إنشاء معرّف الطلب، أعد المحاولة.'});
+const ACT_LABEL={set_player_name:'تغيير اسم لاعب',set_floor:'تغيير الطابق',set_registration:'فتح/إغلاق التسجيل',set_eligibility:'تغيير الأحقية',set_stat:'تعديل إحصائية',set_balance:'تعديل رصيد',set_default_base_stat:'القيمة الابتدائية للإحصائيات',create_node:'إنشاء انبثاق',update_node:'تعديل انبثاق',delete_node:'حذف انبثاق',discard_pending:'تراجع عن تعديل',reorder_nodes:'إعادة ترتيب',publish_tree:'نشر الشجرة',add_skill:'إضافة مهارة',update_skill:'تعديل مهارة',delete_skill:'حذف مهارة',add_item:'إضافة غرض',update_item:'تعديل غرض',delete_item:'حذف غرض',export_backup:'نسخة احتياطية',bulk_grant_path_points:'منح نقاط جماعية',purge_tree:'حذف انبثاقات الاختبار',publish_graph:'نشر الشجرة'};
 const ni=(v,l,o)=>h('input',Object.assign({class:'in',type:'number',inputmode:'numeric',value:v,'aria-label':l},o||{}));
 const isInt=v=>Number.isInteger(+v)&&String(v).trim()!=='';
 function adminCard(P,id,reload){
@@ -416,6 +447,21 @@ route(/^\/admin$/,async()=>{
  bb.addEventListener('click',()=>act(bb,async()=>{if(!isInt(base.value)||+base.value<0){toast('أدخل رقمًا صحيحًا.',true);return}await rpc('admin_set_default_base_stat',{p_value:+base.value});toast('حُفظت القيمة. تنطبق على اللاعبين الجدد فقط.')}));
  const bk=h('button',{class:'btn',type:'button'},'تنزيل نسخة احتياطية (JSON)');
  bk.addEventListener('click',()=>act(bk,async()=>{const j=await rpc('admin_export_all');const a=h('a',{href:URL.createObjectURL(new Blob([JSON.stringify(j,null,1)],{type:'application/json'})),download:'backup-'+new Date().toISOString().slice(0,10)+'.json'});document.body.append(a);a.click();a.remove();toast('تم تجهيز النسخة الاحتياطية.')}));
+ const uuid4=()=>crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+ const gAmt=ni('','مقدار النقاط',{min:1,placeholder:'مثال: 10'}),gBtn=h('button',{class:'btn gold',type:'button'},'منح للجميع'),gRes=h('div');
+ gBtn.addEventListener('click',()=>act(gBtn,async()=>{
+  const a=gAmt.value.trim();if(!isInt(a)||+a<1||+a>1000000){toast('أدخل عددًا صحيحًا من 1 إلى 1000000.',true);return}
+  const n=await rpc('admin_player_count');if(!n){toast('لا يوجد لاعبون مسجلون لتلقي النقاط.',true);return}
+  let pend=null;try{pend=JSON.parse(sessionStorage.getItem('bulkGrant')||'null')}catch(_){}
+  const rid=pend&&pend.a===+a?pend.rid:uuid4();try{sessionStorage.setItem('bulkGrant',JSON.stringify({a:+a,rid}))}catch(_){}
+  const ok=h('button',{class:'btn gold full',type:'button'},'تأكيد المنح');
+  const sh=sheet('تأكيد المنح الجماعي',h('div',null,h('p',null,'سيحصل كل لاعب على ',h('b',null,a+' نقطة شجرة'),' تُضاف إلى رصيده الحالي.'),h('p',null,'عدد المستفيدين: ',h('b',null,String(n)),' لاعبًا (دون حساب DMaster). الإجمالي: ',h('b',null,String(+a*n)),' نقطة.'),h('p',{class:'muted sm'},'لا يمكن التراجع عن هذه العملية تلقائيًا.'),ok));
+  ok.addEventListener('click',()=>act(ok,async()=>{
+   const r=await rpc('admin_grant_path_points_all',{p_amount:+a,p_request:rid});
+   try{sessionStorage.removeItem('bulkGrant')}catch(_){}
+   sh.close();gAmt.value='';
+   gRes.replaceChildren(h('div',{class:'rw',role:'status'},r.duplicate?h('b',null,'هذا الطلب نُفّذ سابقًا، ولم تُضَف نقاط جديدة. '):h('b',null,'تم المنح بنجاح. '),r.amount+' نقطة لكل لاعب · '+r.recipients+' لاعبًا · '+new Date(r.at).toLocaleString('ar')));
+   toast(r.duplicate?'سبق تنفيذ هذا الطلب.':'تم منح النقاط للجميع.')}))}));
  const q=h('input',{class:'in',placeholder:'ابحث باسم اللاعب أو اسم المستخدم','aria-label':'بحث'}),list=h('div',{class:'list'});let tm;
  const find=async()=>{const d=await rpc('admin_list_players',{p_search:q.value.trim()||null});list.replaceChildren(...(d.length?d.map(p=>h('a',{class:'it',href:'#/p/'+p.id},h('span',{class:'sp'},p.player_name),h('span',{class:'muted sm',dir:'ltr'},'@'+p.username))):[h('p',{class:'empty'},'لا يوجد لاعبون مطابقون.')]))};
  q.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(()=>find().catch(e=>toast(say(e),true)),250)});
@@ -424,95 +470,174 @@ route(/^\/admin$/,async()=>{
    h('label',{class:'f'},'الطابق العام (يظهر في ملفات كل اللاعبين)'),h('div',{class:'row',style:'margin:-8px 0 14px'},floor,fb),
    h('label',{class:'row',for:'reg',style:'margin-bottom:14px;gap:10px'},reg,h('span',null,'السماح بتسجيل حسابات جديدة')),
    h('label',{class:'f'},'القيمة الابتدائية لكل إحصائية عند إنشاء حساب جديد'),h('div',{class:'row',style:'margin-top:-8px'},base,bb)),
+  h('div',{class:'card'},h('h3',{style:'margin-bottom:8px'},'منح نقاط جماعية'),h('p',{class:'muted sm',style:'margin:0 0 10px'},'تُضاف نقاط شجرة المسار إلى رصيد كل لاعب مسجّل، ولا تستبدله. لا يحصل حساب DMaster على نقاط.'),h('div',{class:'row'},gAmt,gBtn),gRes),
   h('a',{class:'btn gold full',href:'#/admin/tree',style:'display:block;text-align:center;margin-bottom:14px;line-height:28px'},'إنشاء شجرة المسار وإدارتها'),
   h('div',{class:'card'},h('h3',{style:'margin-bottom:8px'},'اللاعبون'),h('div',{style:'margin-bottom:10px'},q),list),
   h('div',{class:'card'},h('h3',{style:'margin-bottom:8px'},'النسخ الاحتياطي'),h('p',{class:'muted sm',style:'margin:0 0 10px'},'ملف يضم اللاعبين والإحصائيات والشجرة والمشتريات والمهارات والأغراض وسجل العمليات. لا يتضمن كلمات المرور.'),bk),
   h('div',{class:'card'},h('h3',{style:'margin-bottom:8px'},'آخر العمليات الإدارية'),
-   (logs&&logs.length)?logs.map(l=>h('div',{class:'lg'},h('b',null,ACT_LABEL[l.action]||l.action),h('span',{class:'muted sm'},' · '+new Date(l.created_at).toLocaleString('ar'))))
+   (logs&&logs.length)?logs.map(l=>h('div',{class:'lg'},h('b',null,ACT_LABEL[l.action]||l.action),l.action==='bulk_grant_path_points'&&l.details?h('span',null,' · '+l.details.amount+' نقطة لـ '+l.details.recipients+' لاعب'):null,h('span',{class:'muted sm'},' · '+new Date(l.created_at).toLocaleString('ar'))))
    :h('p',{class:'empty'},'لا توجد عمليات بعد.'))));
  find().catch(()=>{})});
-/* ---- admin: path tree editor ---- */
+/* ---- visual path-graph editor (DMaster) ---- */
+Object.assign(ERR,{version_conflict:'تغيّرت المسودة من مكان آخر. أعد تحميل الصفحة.',invalid_graph:'الشجرة تحتوي مشاكل تمنع النشر.',kind_locked:'لا يمكن تغيير نوع عقدة منشورة.',bad_doc:'مستند الشجرة غير صالح.',too_large:'الشجرة أكبر من الحد المسموح.'});
 const TYPES=[['skill','مهارة'],['health','صحة'],['points','نقاط إحصائيات غير مخصصة'],['str','القوة'],['dex','الرشاقة'],['con','الصلابة'],['int','الذكاء'],['wis','الحكمة'],['cha','الكاريزما'],['question','علامة استفهام (؟)']];
 const TYPE_NAME=Object.fromEntries(TYPES);
 const rewardTxt=(i,a)=>{const m={health:' صحة',points:' إحصائية غير مخصصة',str:' قوة',dex:' رشاقة',con:' صلابة',int:' ذكاء',wis:' حكمة',cha:' كاريزما'};return a>0&&m[i]?'+'+a+m[i]:''};
-const effN=n=>{const o=Object.assign({},n,n.pending||{});o.del=!!(n.pending&&n.pending._delete);o.base=n;delete o.pending;return o};
 const lab=(t,...c)=>h('label',{class:'f'},t,...c);
-function mountTree(box,nodes,onTap){
- const L=layoutTree(nodes),st={x:0,y:0,k:1};
- box.innerHTML='<svg role="group" aria-label="معاينة الشجرة"><g></g></svg>';
- const g=box.querySelector('g');g.innerHTML=treeMarkup(L.pos);
- const pz=panZoom(box,g,st,onTap),r0=()=>box.getBoundingClientRect();
- const fit=()=>{const r=r0(),w=L.x1-L.x0;st.k=Math.min(1.1,(r.width-16)/w);st.x=(r.width-w*st.k)/2-L.x0*st.k;st.y=16-L.y0*st.k;pz.apply()};
- const t=(x,l,f)=>h('button',{class:'btn sm',type:'button','aria-label':l,onclick:f},x);
- box.append(h('div',{class:'tools'},t('+','تكبير',()=>pz.zoomAt(r0().width/2,r0().height/2,1.25)),t('−','تصغير',()=>pz.zoomAt(r0().width/2,r0().height/2,.8)),t('⤢','ملاءمة',fit)));
- requestAnimationFrame(fit)}
+const uuidv4=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:r&3|8).toString(16)});
+const PROB={bad_doc:'مستند غير صالح',too_large:'الشجرة كبيرة جدًا',missing_id:'عقدة بلا معرّف',duplicate_id:'معرّف مكرر',invalid_name:'اسم غير صالح',invalid_kind:'نوع غير صالح',invalid_icon:'أيقونة غير صالحة',invalid_price:'سعر غير صالح',description_too_long:'الوصف يزيد على 2000 حرف',invalid_reward:'بيانات المكافأة غير مكتملة',mandatory_on_evolution:'التطور لا يكون إلزاميًا',evolution_with_stage:'التطور لا يتبع مرحلة عادية',normal_with_offer:'الانبثاق العادي لا يظهر بعد مرحلة',bad_stage:'الانبثاق بلا مرحلة صالحة',bad_offered_after:'مرحلة ظهور التطور غير صالحة',bad_edge:'اتصال غير صالح',duplicate_edge:'اتصال مكرر',orphan_node:'انبثاق عادي بلا اتصال وارد',evolution_cycle:'حلقة في سلسلة التطورات',cycle:'اتصال دائري',unreachable_in_stage:'لا يمكن الوصول إليه من تطور مرحلته'};
+const radOf=n=>n.kind==='evolution'?34:28;
 route(/^\/admin\/tree$/,async()=>{
  if(!S.me.is_admin){location.replace('#/');return}
- let A=[],prev=false;const host=h('div');
- const load=async()=>{A=await rpc('admin_get_tree');draw()};
- const done=msg=>async()=>{if(msg)toast(msg);await load()};
- const kidsOf=eff=>{const k={};eff.forEach(n=>{(k[n.parent_id||'']=k[n.parent_id||'']||[]).push(n)});Object.values(k).forEach(a=>a.sort((x,y)=>x.sort_order-y.sort_order));return k};
- function form(n,parentId){
-  const eff=A.map(effN),kids=kidsOf(eff),bad=new Set(),depth={};
-  const mark=id=>(kids[id]||[]).forEach(c=>{bad.add(c.id);mark(c.id)});if(n){bad.add(n.id);mark(n.id)}
-  const walk=(pid,d)=>(kids[pid||'']||[]).forEach(c=>{depth[c.id]=d;walk(c.id,d+1)});walk(null,0);
-  const V={amount:n&&n.amount!=null?n.amount:'',sname:(n&&n.skill_name)||'',smod:n&&n.skill_modifier!=null?n.skill_modifier:'',desc:(n&&n.description)||''};
-  const name=h('input',{class:'in',maxlength:80,value:n?n.name:'','aria-label':'اسم الانبثاق'});
-  const typ=h('select',{class:'in','aria-label':'نوع الأيقونة'},TYPES.map(([k,l])=>h('option',{value:k,selected:k===(n?n.icon:'str')},l)));
-  const price=ni(n?n.price:0,'السعر',{min:0});
-  const par=h('select',{class:'in','aria-label':'الانبثاق الأب'},h('option',{value:''},'— خيار أولي (بلا أب) —'),...eff.filter(x=>!bad.has(x.id)&&!x.del).sort((a,b)=>(depth[a.id]||0)-(depth[b.id]||0)).map(x=>h('option',{value:x.id,selected:x.id===(n?n.parent_id:parentId)},'· '.repeat(depth[x.id]||0)+x.name)));
-  const box=h('div'),pv=h('p',{class:'muted',style:'margin:-6px 0 12px;font-weight:600'});
-  const bind=(el,k)=>el.addEventListener('input',()=>{V[k]=el.value;if(k==='amount')pv.textContent=rewardTxt(typ.value,parseInt(V.amount,10))});
-  const ta=(k,l)=>{const d=h('textarea',{class:'in',rows:5,maxlength:2000,style:'resize:vertical'});d.value=V.desc;bind(d,'desc');return lab(l,d)};
-  const dyn=()=>{const t=typ.value;box.replaceChildren();
-   if(t==='skill'){const a=h('input',{class:'in',maxlength:80,value:V.sname}),m=h('input',{class:'in',type:'number',step:'any',value:V.smod});bind(a,'sname');bind(m,'smod');box.append(lab('اسم المهارة',a),lab('مُعدل المهارة',m),ta('desc','وصف المهارة (حتى 2000 حرف)'))}
-   else if(t==='question')box.append(ta('desc','الوصف (حتى 2000 حرف)'));
-   else{const a=ni(V.amount,'مقدار المكافأة',{min:1});bind(a,'amount');pv.textContent=rewardTxt(t,parseInt(V.amount,10));box.append(lab('مقدار المكافأة (يظهر الوصف تلقائيًا)',a),pv)}};
-  typ.addEventListener('change',dyn);dyn();
-  const save=h('button',{class:'btn gold full',type:'button'},n?'حفظ التعديل':'إنشاء الانبثاق');
-  const sh=sheet(n?'تعديل الانبثاق':'انبثاق جديد',h('div',null,lab('اسم الانبثاق',name),lab('نوع الأيقونة',typ),lab('السعر بنقاط شجرة المسار',price),lab('الانبثاق الأب',par),box,save));
-  save.addEventListener('click',()=>act(save,async()=>{
-   const t=typ.value,data={name:name.value.trim(),icon:t,price:parseInt(price.value,10),parent_id:par.value||null};
-   if(!data.name){toast('اسم الانبثاق مطلوب.',true);return}
-   if(!(data.price>=0)){toast('السعر غير صالح.',true);return}
-   if(t==='skill'){data.skill_name=V.sname.trim();data.skill_modifier=parseFloat(V.smod);data.description=V.desc||null;data.amount=null;if(!data.skill_name||!isFinite(data.skill_modifier)){toast('اسم المهارة ومُعدلها مطلوبان.',true);return}}
-   else if(t==='question'){data.description=V.desc||null;data.amount=null;data.skill_name=null;data.skill_modifier=null}
-   else{data.amount=parseInt(V.amount,10);data.description=null;data.skill_name=null;data.skill_modifier=null;if(!(data.amount>=1)){toast('مقدار المكافأة مطلوب (1 فأكثر).',true);return}}
-   if(!n){await rpc('admin_create_node',{p_data:data});sh.close();await done('أُنشئ الانبثاق كمسودة. انشر الشجرة ليظهر للاعبين.')();return}
-   const diff={};for(const k in data){const cur=n[k]===undefined?null:n[k];if(JSON.stringify(cur)!==JSON.stringify(data[k]))diff[k]=data[k]}
-   if(!Object.keys(diff).length){toast('لا توجد تغييرات.');return}
-   const r=await rpc('admin_update_node',{p_id:n.id,p_changes:diff});sh.close();await done(r.staged?'حُفظ التعديل كتعديل معلّق. انشر الشجرة ليُطبَّق.':'حُفظ التعديل.')()}))}
- function rowFor(n,d,sibs){
-  const c=nodeColor(n.icon),pend=n.base.pending&&!n.del,idx=sibs.findIndex(x=>x.id===n.id);
-  const live=A.filter(x=>x.parent_id===n.base.parent_id).sort((a,b)=>a.sort_order-b.sort_order),li=live.findIndex(x=>x.id===n.id);
-  const mv=dir=>act(host,async()=>{const ids=live.map(x=>x.id);const j=li+dir;[ids[li],ids[j]]=[ids[j],ids[li]];await rpc('admin_reorder_children',{p_parent:n.base.parent_id,p_ids:ids});await load()});
-  const parentMoved=n.base.pending&&'parent_id' in n.base.pending;
-  return h('div',{class:'trow'+(n.del?' del':''),style:'margin-inline-start:'+Math.min(d,7)*14+'px;--c:'+c},
-   h('div',{class:'row'},h('span',{class:'chip',html:ic(nodeIcon(n.icon),18)}),h('div',{class:'sp'},h('b',null,n.name),h('div',{class:'muted sm'},TYPE_NAME[n.icon]+(n.icon==='skill'?': '+n.skill_name:rewardTxt(n.icon,n.amount)?' · '+rewardTxt(n.icon,n.amount):''))),h('span',{class:'pill'},n.price+' نقطة')),
-   h('div',{class:'bdg'},n.base.status==='draft'?h('span',{class:'tag new'},'مسودة'):null,pend?h('span',{class:'tag mod'},'تعديل معلّق'):null,n.del?h('span',{class:'tag rm'},'سيُحذف عند النشر'):null,n.base.purchases>0?h('span',{class:'tag'},'اشتراه '+n.base.purchases):null),
-   h('div',{class:'row',style:'gap:6px;flex-wrap:wrap;margin-top:8px'},
-    n.del?null:h('button',{class:'btn sm',type:'button',onclick:()=>form(null,n.id),html:ic(ICON.plus,14)+' ابن'}),
-    n.del?null:h('button',{class:'btn sm',type:'button',onclick:()=>form(n,n.parent_id),html:ic(ICON.edit,14)+' تعديل'}),
-    n.del||parentMoved||li<1?null:h('button',{class:'btn sm',type:'button','aria-label':'قدّم في الترتيب',onclick:()=>mv(-1)},'↑'),
-    n.del||parentMoved||li<0||li>=live.length-1?null:h('button',{class:'btn sm',type:'button','aria-label':'أخّر في الترتيب',onclick:()=>mv(1)},'↓'),
-    n.base.pending?h('button',{class:'btn sm',type:'button',onclick:()=>act(host,async()=>{await rpc('admin_discard_pending',{p_id:n.id});await done('تم التراجع عن التعديل المعلّق.')()})},'تراجع'):null,
-    n.del?null:h('button',{class:'btn sm',type:'button',onclick:()=>confirmSheet('حذف «'+n.name+'»؟'+(n.base.status==='draft'?'':' سيُطبَّق الحذف عند النشر، ولن يفقد من اشتراه مكافأته.'),async()=>{await rpc('admin_delete_node',{p_id:n.id});await done('تم الحذف.')()},'حذف'),html:ic(ICON.trash,14)+' حذف'})))}
+ const d0=await rpc('graph_get_draft');
+ let doc=d0.doc,ver=d0.version,pub=d0.published_version,saved=JSON.stringify(doc);
+ let sel=new Set(),selEdge=null,multi=false,focus=false,linkFrom=null,problems=[],hist=[],fut=[],tmp=null;
+ const st={x:0,y:0,k:1};
+ const M=()=>new Map(doc.nodes.map(n=>[n.id,n]));
+ const dirty=()=>JSON.stringify(doc)!==saved;
+ /* nodes without saved positions: simple layered placement (never re-run for placed nodes) */
+ if(doc.nodes.some(n=>n.x==null||n.y==null)){const inc={};doc.edges.forEach(e=>{if(!inc[e.to])inc[e.to]=e.from});const L=layoutTree(doc.nodes.map(n=>({id:n.id,parent_id:inc[n.id]||null,name:n.name,icon:n.icon})));doc.nodes.forEach(n=>{if(n.x==null||n.y==null){const p=L.pos[n.id];n.x=p?p.x:0;n.y=p?p.y:0}})}
+ const box=h('div',{class:'tv ge-box'});
+ box.innerHTML='<svg role="group" aria-label="محرر الشجرة"><defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6b5d78"/></marker><marker id="ars" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#e8cb82"/></marker></defs><g id="gw"><g id="gc"></g><g id="gtmp"></g></g></svg>';
+ const gw=box.querySelector('#gw'),gc=box.querySelector('#gc'),gtmp=box.querySelector('#gtmp');
+ const bar=h('div',{class:'gbar'}),status=h('span',{class:'muted sm'}),hint=h('p',{class:'muted sm',style:'margin:2px 0 0;line-height:1.5'});
+ const apply=()=>gw.setAttribute('transform',`translate(${st.x} ${st.y}) scale(${st.k})`);
+ const toDoc=(cx,cy)=>{const r=box.getBoundingClientRect();return[(cx-r.left-st.x)/st.k,(cy-r.top-st.y)/st.k]};
+ const zoomAt=(mx,my,f)=>{const k=Math.max(.2,Math.min(2.5,st.k*f)),r=k/st.k;st.x=mx-(mx-st.x)*r;st.y=my-(my-st.y)*r;st.k=k;apply()};
+ const fit=()=>{const r=box.getBoundingClientRect();if(!doc.nodes.length){st.k=1;st.x=r.width/2;st.y=r.height/3;apply();return}
+  const xs=doc.nodes.map(n=>n.x),ys=doc.nodes.map(n=>n.y),x0=Math.min(...xs)-70,x1=Math.max(...xs)+70,y0=Math.min(...ys)-60,y1=Math.max(...ys)+90;
+  st.k=Math.max(.2,Math.min(1.1,r.width/(x1-x0),r.height/(y1-y0)));st.x=(r.width-(x1-x0)*st.k)/2-x0*st.k;st.y=(r.height-(y1-y0)*st.k)/2-y0*st.k;apply()};
+ const ensureVisible=n=>{const r=box.getBoundingClientRect(),sx=n.x*st.k+st.x,sy=n.y*st.k+st.y,m=70;let dx=0,dy=0;if(sx<m)dx=m-sx;else if(sx>r.width-m)dx=r.width-m-sx;if(sy<m)dy=m-sy;else if(sy>r.height-m-40)dy=r.height-m-40-sy;if(dx||dy){st.x+=dx;st.y+=dy;apply()}};
+ const centerOn=n=>{const r=box.getBoundingClientRect();st.k=Math.max(st.k,.9);st.x=r.width/2-n.x*st.k;st.y=r.height/2-n.y*st.k;apply()};
+ /* ---- rendering ---- */
  function draw(){
-  const eff=A.map(effN),kids=kidsOf(eff),pending=A.filter(n=>n.status==='draft'||n.pending).length,rows=[];
-  const walk=(pid,d)=>(kids[pid||'']||[]).forEach(n=>{rows.push(rowFor(n,d,kids[pid||'']));walk(n.id,d+1)});walk(null,0);
-  const pub=h('button',{class:'btn gold',type:'button',disabled:!pending},'نشر التعديلات'+(pending?' ('+pending+')':''));
-  pub.addEventListener('click',()=>confirmSheet('سيُطبَّق '+pending+' تغيير على شجرة اللاعبين فورًا. متابعة؟',async()=>{const r=await rpc('admin_publish_tree');await done('نُشرت الشجرة: جديد '+r.published+' · معدّل '+r.updated+' · محذوف '+r.deleted+'.')()},'نشر'));
-  const pbtn=h('button',{class:'btn',type:'button',onclick:()=>{prev=!prev;draw()}},prev?'إخفاء المعاينة':'معاينة الشجرة');
-  let pbox=null;
-  if(prev){pbox=h('div',{class:'tv',style:'height:55dvh;margin-bottom:14px'});
-   const nodes=eff.filter(n=>!n.del).map(n=>({id:n.id,parent_id:n.parent_id,name:n.name,icon:n.icon,price:n.price,amount:n.amount,skill_name:n.skill_name,skill_modifier:n.skill_modifier,description:n.description,reward_text:rewardTxt(n.icon,n.amount),state:'available',can_buy:n.base.status==='draft'||!!n.base.pending}));
-   requestAnimationFrame(()=>mountTree(pbox,nodes,id=>{const n=nodes.find(x=>x.id===id);if(!n)return;sheet(n.name,h('div',null,h('p',null,h('b',null,TYPE_NAME[n.icon]),n.icon==='skill'?' · '+n.skill_name+' · المُعدل '+fmt(n.skill_modifier):n.reward_text?' · '+n.reward_text:''),n.description?h('p',{class:'ds',style:'white-space:pre-wrap'},n.description):null,h('p',{class:'muted'},'السعر: '+n.price+' نقطة شجرة')))}))}
-  host.replaceChildren(...[
-   h('div',{class:'card'},h('div',{class:'row',style:'flex-wrap:wrap;gap:8px'},pub,pbtn,h('button',{class:'btn',type:'button',onclick:()=>form(null,null),html:ic(ICON.plus,16)+' خيار أولي'})),
-    h('p',{class:'muted sm',style:'margin:10px 0 0'},'ما تنشئه أو تعدّله يبقى مخفيًا عن اللاعبين حتى تضغط «نشر». في المعاينة، المتوهّج هو الجديد أو المعدّل.')),
-   pbox,...(rows.length?rows:[h('p',{class:'empty'},'لا توجد انبثاقات بعد. ابدأ بإضافة الخيارات الأولية التي ستظهر للاعبين الجدد.')])].filter(Boolean))}
- view(h('div',null,h('div',{class:'sec'},h('h2',null,'محرر شجرة المسار'),h('a',{class:'btn sm',href:'#/admin'},'→ الإدارة')),host));
- await load()});
+  const nm=M(),bad=new Set(problems.map(p=>p.node).filter(Boolean)),f=focus&&sel.size===1?[...sel][0]:null,near=new Set();
+  if(f){near.add(f);doc.edges.forEach(e=>{if(e.from===f)near.add(e.to);if(e.to===f)near.add(e.from)})}
+  let ed='',nd='';
+  for(const e of doc.edges){const a=nm.get(e.from),b=nm.get(e.to);if(!a||!b)continue;
+   const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d,ra=radOf(a),rb=radOf(b);
+   const x1=a.x+ux*ra,y1=a.y+uy*ra,x2=b.x-ux*(rb+7),y2=b.y-uy*(rb+7),my=(y1+y2)/2,key=e.from+'>'+e.to,s=selEdge===key;
+   const p=`M${x1} ${y1}C${x1} ${my} ${x2} ${my} ${x2} ${y2}`;
+   ed+=`<g class="ge${s?' sel':''}${f&&e.from!==f&&e.to!==f?' dim':''}${f&&(e.from===f||e.to===f)?' hot':''}" data-edge="${key}"><path class="hit" d="${p}"/><path class="ln" d="${p}" marker-end="url(#${s||(f&&(e.from===f||e.to===f))?'ars':'ar'})"/></g>`}
+  for(const n of doc.nodes){const evo=n.kind==='evolution',r=radOf(n),s=sel.has(n.id);
+   nd+=`<g class="gn${evo?' evo':''}${s?' sel':''}${bad.has(n.id)?' bad':''}${f&&!near.has(n.id)?' dim':''}${linkFrom===n.id?' linking':''}" data-id="${esc(n.id)}" transform="translate(${n.x} ${n.y})" style="--c:${evo?'var(--gold)':nodeColor(n.icon)}"><circle r="${r}"/>${evo?`<circle class="ring" r="${r+6}"/>`:''}${n.mandatory?`<circle class="mand" cx="${r-4}" cy="${-r+4}" r="6"/>`:''}<g transform="translate(-14 -14) scale(1.16)" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${nodeIcon(n.icon)}</g><text y="${r+20}" text-anchor="middle">${esc(shortName(n.name))}</text>${s&&sel.size===1?`<circle class="hdhit" data-handle="${esc(n.id)}" cx="${r+16}" r="24"/><circle class="hd" cx="${r+16}" r="9"/>`:''}</g>`}
+  gc.innerHTML=ed+nd;
+  if(tmp){const a=nm.get(tmp.from);gtmp.innerHTML=a?`<path class="tmpl" d="M${a.x} ${a.y}L${tmp.x} ${tmp.y}"/>`:''}else gtmp.innerHTML='';
+  drawBar();drawStatus()}
+ function drawStatus(){const d=dirty();status.textContent=d?'● تعديلات غير محفوظة':(ver!==pub?'مسودة محفوظة وغير منشورة':'محفوظة ومنشورة');status.style.color=d?'var(--gold2)':'';
+  hint.textContent=linkFrom?'اضغط العقدة التي تريد الاتصال بها.':sel.size===1?'اضغط العقدة ثانية للتعديل، أو اسحب النقطة الذهبية إلى عقدة لربطهما.':doc.nodes.length?'اضغط عقدة لعرض أدواتها.':'مساحة فارغة. ابدأ بإضافة مسار أولي.';
+  ub.disabled=!hist.length;rb.disabled=!fut.length}
+ function drawBar(){const one=sel.size===1?M().get([...sel][0]):null,b=(t,f,cls)=>h('button',{class:'btn sm'+(cls?' '+cls:''),type:'button',onclick:f},t);
+  if(selEdge){bar.replaceChildren(b('حذف الاتصال',()=>{commit(()=>{const[a,c]=selEdge.split('>');doc.edges=doc.edges.filter(e=>!(e.from===a&&e.to===c))});selEdge=null;draw()}),b('إلغاء',()=>{selEdge=null;draw()}));bar.style.display='flex';return}
+  if(one){bar.replaceChildren(b('+ انبثاق',()=>addChild(one,'normal')),b('+ تطور',()=>addChild(one,'evolution')),b('تعديل',()=>editNode(one)),b(linkFrom?'إلغاء الربط':'ربط',()=>{linkFrom=linkFrom?null:one.id;draw()}),b(focus?'إنهاء التركيز':'تركيز',()=>{focus=!focus;draw()}),b('حذف',()=>delSel(),'warn'));bar.style.display='flex';return}
+  if(sel.size>1){bar.replaceChildren(h('span',{class:'muted sm'},sel.size+' محددة'),b('حذف المحدد',()=>delSel(),'warn'),b('إلغاء التحديد',()=>{sel.clear();draw()}));bar.style.display='flex';return}
+  bar.style.display='none'}
+ /* ---- history ---- */
+ function commit(fn){hist.push(JSON.stringify(doc));if(hist.length>100)hist.shift();fut=[];fn()}
+ const undo=()=>{if(!hist.length)return;fut.push(JSON.stringify(doc));doc=JSON.parse(hist.pop());sel.clear();selEdge=null;draw()};
+ const redo=()=>{if(!fut.length)return;hist.push(JSON.stringify(doc));doc=JSON.parse(fut.pop());sel.clear();selEdge=null;draw()};
+ /* ---- editing operations ---- */
+ function stageOf(n){return n.kind==='evolution'?n.id:n.stage_id}
+ function freeSpot(px,py){const taken=(x,y)=>doc.nodes.some(m=>Math.hypot(m.x-x,m.y-y)<90);for(let i=0;i<40;i++){const k=(i%2?1:-1)*Math.ceil(i/2),x=px+k*110,y=py+150;if(!taken(x,y))return[x,y]}return[px,py+150*(1+Math.floor(doc.nodes.length/8))]}
+ function newNode(kind,parent,pos){const n={id:uuidv4(),kind,name:kind==='evolution'?'تطور جديد':'انبثاق جديد',icon:kind==='evolution'?'question':'str',price:0,amount:kind==='evolution'?null:1,skill_name:null,skill_modifier:null,description:null,mandatory:false,stage_id:null,offered_after:null,x:pos[0],y:pos[1]};
+  if(parent){if(kind==='normal')n.stage_id=stageOf(parent);else n.offered_after=stageOf(parent)}return n}
+ function addChild(p,kind){let n;commit(()=>{const[x,y]=freeSpot(p.x,p.y);n=newNode(kind,p,[x,y]);doc.nodes.push(n);doc.edges.push({from:p.id,to:n.id});sel=new Set([n.id]);selEdge=null});draw();ensureVisible(n);editNode(n)}
+ function addRoot(){const r=box.getBoundingClientRect(),[x,y]=toDoc(r.left+r.width/2,r.top+r.height/3);let n;commit(()=>{const[fx,fy]=freeSpot(x,y-150);n=newNode('evolution',null,[fx,fy]);n.name='مسار أولي جديد';doc.nodes.push(n);sel=new Set([n.id])});draw();ensureVisible(n);editNode(n)}
+ function reaches(a,b){const out={};doc.edges.forEach(e=>(out[e.from]=out[e.from]||[]).push(e.to));const seen=new Set([a]),q=[a];while(q.length){const c=q.pop();if(c===b)return true;for(const t of out[c]||[])if(!seen.has(t)){seen.add(t);q.push(t)}}return false}
+ function link(a,b){if(a===b)return;if(doc.edges.some(e=>e.from===a&&e.to===b)){toast('هذا الاتصال موجود بالفعل.',true);return}
+  if(reaches(b,a)){toast('هذا الاتصال يصنع حلقة دائرية.',true);return}
+  commit(()=>doc.edges.push({from:a,to:b}));draw();toast('تم الربط.')}
+ function removeNodes(ids){commit(()=>{doc.nodes=doc.nodes.filter(n=>!ids.has(n.id));doc.edges=doc.edges.filter(e=>!ids.has(e.from)&&!ids.has(e.to));doc.nodes.forEach(n=>{if(ids.has(n.stage_id))n.stage_id=null;if(ids.has(n.offered_after))n.offered_after=null});sel.clear();selEdge=null;linkFrom=null});draw()}
+ function delSel(){const ids=new Set(sel);confirmSheet('حذف '+(ids.size>1?ids.size+' عقد':'العقدة المحددة')+' مع اتصالاتها؟ إن كان لاعبون قد اشتروها فستبقى لهم في شجرتهم وتختفي عن غيرهم بعد النشر.',()=>removeNodes(ids),'حذف')}
+ function editNode(n){
+  const evo=n.kind==='evolution',nm=M(),V={amount:n.amount==null?'':n.amount,sname:n.skill_name||'',smod:n.skill_modifier==null?'':n.skill_modifier,desc:n.description||''};
+  const name=h('input',{class:'in',maxlength:80,value:n.name,'aria-label':'الاسم'}),price=ni(n.price,'السعر',{min:0});
+  const typ=h('select',{class:'in','aria-label':'نوع الأيقونة'},TYPES.map(([k,l])=>h('option',{value:k,selected:k===n.icon},l)));
+  const mand=h('input',{type:'checkbox',checked:!!n.mandatory,id:'mand'});
+  const evos=doc.nodes.filter(x=>x.kind==='evolution'&&x.id!==n.id);
+  const chain=id=>{const s=new Set();let c=id;while(c&&!s.has(c)){s.add(c);const m=nm.get(c);c=m&&m.offered_after}return s};
+  const stageSel=h('select',{class:'in','aria-label':evo?'تظهر بعد ختم':'المرحلة'},evo?h('option',{value:''},'— مسار أولي (عند بداية اللعب) —'):null,...evos.filter(x=>!evo||!chain(x.id).has(n.id)).map(x=>h('option',{value:x.id,selected:x.id===(evo?n.offered_after:n.stage_id)},x.name)));
+  const box2=h('div'),pv=h('p',{class:'muted',style:'margin:-6px 0 12px;font-weight:600'});
+  const bind=(el,k)=>el.addEventListener('input',()=>{V[k]=el.value;if(k==='amount')pv.textContent=rewardTxt(typ.value,parseInt(V.amount,10))});
+  const ta=l=>{const d=h('textarea',{class:'in',rows:5,maxlength:2000,style:'resize:vertical'});d.value=V.desc;bind(d,'desc');return lab(l,d)};
+  const dyn=()=>{const t=typ.value;box2.replaceChildren();
+   if(evo){box2.append(ta('وصف التطور (حتى 2000 حرف)'));return}
+   if(t==='skill'){const a=h('input',{class:'in',maxlength:80,value:V.sname}),m=h('input',{class:'in',type:'number',step:'any',value:V.smod});bind(a,'sname');bind(m,'smod');box2.append(lab('اسم المهارة',a),lab('مُعدل المهارة',m),ta('وصف المهارة (حتى 2000 حرف)'))}
+   else if(t==='question')box2.append(ta('الوصف (حتى 2000 حرف)'));
+   else{const a=ni(V.amount,'مقدار المكافأة',{min:1});bind(a,'amount');pv.textContent=rewardTxt(t,parseInt(V.amount,10));box2.append(lab('مقدار المكافأة (يظهر الوصف تلقائيًا)',a),pv)}};
+  typ.addEventListener('change',dyn);dyn();
+  const stageNodes=doc.nodes.filter(x=>x.kind==='normal'&&x.stage_id===n.id),after=doc.nodes.filter(x=>x.kind==='evolution'&&x.offered_after===n.id);
+  const info=evo?h('div',{class:'rw'},h('div',{class:'sm'},'انبثاقات هذه المرحلة: ',h('b',null,String(stageNodes.length)),' (إلزامية: ',h('b',null,String(stageNodes.filter(x=>x.mandatory).length)),')'),h('div',{class:'sm',style:'margin-top:6px'},'التطورات التي تظهر بعد ختمها: ',after.length?after.map(x=>h('a',{href:'javascript:void 0',onclick:()=>{sh.close();sel=new Set([x.id]);draw();centerOn(x)}},x.name+' ')):h('span',{class:'muted'},'لا شيء بعد'))):null;
+  const save=h('button',{class:'btn gold full',type:'button',style:'margin-top:4px'},'حفظ'),del=h('button',{class:'btn full',type:'button',style:'margin-top:8px'},'حذف هذه العقدة');
+  const sh=sheet(evo?'تطور مساري':'انبثاق عادي',h('div',null,lab('الاسم',name),lab('نوع الأيقونة'+(evo?' (للتزيين فقط)':''),typ),lab('السعر بنقاط شجرة المسار'+(evo?' (0 = اختيار مجاني)':''),price),lab(evo?'يظهر بعد ختم المرحلة':'المرحلة التابع لها',stageSel),evo?null:h('label',{class:'row',for:'mand',style:'margin:0 0 12px;gap:10px'},mand,h('span',null,'إلزامي لختم المرحلة')),box2,info,save,del));
+  save.addEventListener('click',()=>act(save,async()=>{
+   const t=typ.value,p=parseInt(price.value,10),v={name:name.value.trim(),icon:t,price:p};
+   if(!v.name){toast('الاسم مطلوب.',true);return}if(!(p>=0)){toast('السعر غير صالح.',true);return}
+   if(evo){Object.assign(v,{amount:null,skill_name:null,skill_modifier:null,description:V.desc||null,offered_after:stageSel.value||null,mandatory:false})}
+   else{if(!stageSel.value){toast('اختر المرحلة التابع لها.',true);return}Object.assign(v,{stage_id:stageSel.value,mandatory:mand.checked});
+    if(t==='skill'){const m=parseFloat(V.smod);if(!V.sname.trim()||!isFinite(m)){toast('اسم المهارة ومُعدلها مطلوبان.',true);return}Object.assign(v,{amount:null,skill_name:V.sname.trim(),skill_modifier:m,description:V.desc||null})}
+    else if(t==='question')Object.assign(v,{amount:null,skill_name:null,skill_modifier:null,description:V.desc||null});
+    else{const a=parseInt(V.amount,10);if(!(a>=1)){toast('مقدار المكافأة مطلوب (1 فأكثر).',true);return}Object.assign(v,{amount:a,skill_name:null,skill_modifier:null,description:null})}}
+   commit(()=>Object.assign(n,v));sh.close();draw()}));
+  del.addEventListener('click',()=>{sh.close();sel=new Set([n.id]);draw();delSel()})}
+ /* ---- save / validate / publish ---- */
+ async function saveDraft(quiet){const r=await rpc('graph_save_draft',{p_doc:doc,p_expected:ver});ver=r.version;pub=r.published_version;saved=JSON.stringify(doc);drawStatus();if(!quiet)toast('حُفظت المسودة.')}
+ function showProblems(){const nm=M(),list=problems.map(p=>{const n=p.node&&nm.get(p.node);return h('div',{class:'lg'},h('b',null,PROB[p.code]||p.code),n?h('span',null,' · '):null,n?h('a',{href:'javascript:void 0',onclick:()=>{ps.close();sel=new Set([n.id]);draw();centerOn(n)}},n.name):null)});
+  const ps=sheet('مشاكل تمنع النشر ('+problems.length+')',h('div',null,h('p',{class:'muted sm'},'العقد المعنية معلّمة بالأحمر على الشجرة.'),list))}
+ async function check(){const r=await rpc('graph_validate',{});problems=r;draw();if(r.length)showProblems();else toast('الشجرة سليمة وجاهزة للنشر.');return r}
+ async function publish(){if(dirty())await saveDraft(true);const r=await check();if(r.length)return;
+  confirmSheet('سيُنشر '+doc.nodes.length+' عقدة و'+doc.edges.length+' اتصالًا للاعبين فورًا. متابعة؟',async()=>{await rpc('graph_publish');const d=await rpc('graph_get_draft');ver=d.version;pub=d.published_version;drawStatus();toast('نُشرت الشجرة.')},'نشر')}
+ function searchSheet(){const q=h('input',{class:'in',placeholder:'اسم العقدة','aria-label':'بحث'}),list=h('div',{class:'list'});
+  const fill=()=>{const k=q.value.trim();const r=doc.nodes.filter(n=>n.name.includes(k)).slice(0,30);list.replaceChildren(...(r.length?r.map(n=>h('a',{class:'it',href:'javascript:void 0',onclick:()=>{s.close();sel=new Set([n.id]);selEdge=null;draw();centerOn(n)}},h('span',{class:'sp'},n.name),h('span',{class:'muted sm'},n.kind==='evolution'?'تطور':TYPE_NAME[n.icon]))):[h('p',{class:'empty'},'لا نتائج.')]))};
+  const s=sheet('بحث عن عقدة',h('div',null,h('div',{style:'margin-bottom:10px'},q),list));q.addEventListener('input',fill);fill()}
+ /* ---- pointer handling ---- */
+ const pts=new Map();let mode=null,down=null,moved=0,pinch=0;
+ box.addEventListener('pointerdown',e=>{if(e.target.closest('.tools,.gbar'))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size>1){mode='pinch';return}
+  moved=0;const t=e.target,hd=t.closest&&t.closest('[data-handle]'),nd=t.closest&&t.closest('[data-id]'),eg=t.closest&&t.closest('[data-edge]');
+  if(hd){mode='link';down=hd.dataset.handle;const[x,y]=toDoc(e.clientX,e.clientY);tmp={from:down,x,y}}
+  else if(nd){mode='node';down=nd.dataset.id}
+  else if(eg){mode='edge';down=eg.dataset.edge}else{mode='pan';down=null}
+  try{box.setPointerCapture(e.pointerId)}catch(_){}});
+ box.addEventListener('pointermove',e=>{const p=pts.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;
+  if(mode==='pinch'&&pts.size===2){const o=[...pts].find(([i])=>i!==e.pointerId)[1],d0=Math.hypot(p.x-o.x,p.y-o.y),d1=Math.hypot(e.clientX-o.x,e.clientY-o.y),r=box.getBoundingClientRect();if(d0>0)zoomAt((e.clientX+o.x)/2-r.left,(e.clientY+o.y)/2-r.top,d1/d0)}
+  else if(mode==='pan'){st.x+=dx;st.y+=dy;moved+=Math.abs(dx)+Math.abs(dy);apply()}
+  else if(mode==='link'){const[x,y]=toDoc(e.clientX,e.clientY);tmp.x=x;tmp.y=y;moved+=Math.abs(dx)+Math.abs(dy);draw()}
+  else if(mode==='node'){moved+=Math.abs(dx)+Math.abs(dy);
+   if(moved>6){if(!sel.has(down)&&!multi){sel=new Set([down]);selEdge=null}
+    if(!sel.has(down))sel.add(down);
+    if(!box.__dragging){hist.push(JSON.stringify(doc));fut=[];box.__dragging=true}
+    const m=M();sel.forEach(id=>{const n=m.get(id);if(n){n.x+=dx/st.k;n.y+=dy/st.k}});draw()}}
+  p.x=e.clientX;p.y=e.clientY});
+ const end=e=>{if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
+  if(mode==='pinch'){if(!pts.size)mode=null;return}
+  const up=e.type==='pointerup';
+  if(mode==='link'){const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest&&el.closest('[data-id]');tmp=null;if(up&&t&&t.dataset.id!==down)link(down,t.dataset.id);else draw()}
+  else if(mode==='node'){if(box.__dragging){box.__dragging=false;draw()}
+   else if(up&&moved<8){if(linkFrom&&linkFrom!==down){const a=linkFrom;linkFrom=null;link(a,down)}
+    else if(multi){sel.has(down)?sel.delete(down):sel.add(down);selEdge=null;draw()}
+    else if(sel.size===1&&sel.has(down)){editNode(M().get(down))}
+    else{sel=new Set([down]);selEdge=null;draw()}}}
+  else if(mode==='edge'&&up&&moved<8){selEdge=down;sel.clear();draw()}
+  else if(mode==='pan'&&up&&moved<8){sel.clear();selEdge=null;linkFrom=null;draw()}
+  mode=null;down=null};
+ box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
+ box.addEventListener('wheel',e=>{e.preventDefault();const r=box.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:.89)},{passive:false});
+ const onKey=e=>{if(/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||'')))return;if(e.key==='Delete'&&sel.size)delSel();else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo()}else if((e.ctrlKey||e.metaKey)&&(e.key==='y'||e.key==='Z')){e.preventDefault();redo()}};
+ document.addEventListener('keydown',onKey);
+ const onLeave=e=>{if(dirty()){e.preventDefault();e.returnValue=''}};window.addEventListener('beforeunload',onLeave);
+ stopWatch=()=>{document.removeEventListener('keydown',onKey);window.removeEventListener('beforeunload',onLeave);if(dirty())rpc('graph_save_draft',{p_doc:doc,p_expected:ver}).then(()=>toast('حُفظت المسودة تلقائيًا عند الخروج.')).catch(()=>{})};
+ /* ---- layout ---- */
+ const tool=(t,l,f)=>h('button',{class:'btn sm',type:'button','aria-label':l,onclick:f},t);
+ const ub=h('button',{class:'btn sm',type:'button',onclick:undo,'aria-label':'تراجع'},'↶'),rb=h('button',{class:'btn sm',type:'button',onclick:redo,'aria-label':'إعادة'},'↷');
+ const sv=h('button',{class:'btn sm gold',type:'button'},'حفظ'),pb=h('button',{class:'btn sm',type:'button'},'نشر'),mb=h('button',{class:'btn sm',type:'button',onclick:()=>{multi=!multi;mb.classList.toggle('on',multi);toast(multi?'التحديد المتعدد مفعّل: اضغط العقد لتحديدها.':'التحديد المتعدد متوقف.')}},'تحديد متعدد');
+ sv.addEventListener('click',()=>act(sv,()=>saveDraft(false)));pb.addEventListener('click',()=>act(pb,publish));
+ view(h('div',null,
+  h('div',{class:'sec'},h('h2',null,'محرر شجرة المسار'),h('a',{class:'btn sm',href:'#/admin'},'→ الإدارة')),
+  h('div',{class:'card',style:'padding:10px 12px'},h('div',{class:'row tbar'},ub,rb,sv,pb,tool('+ مسار أولي','إضافة مسار أولي',addRoot),mb,tool('بحث','بحث',searchSheet),tool('فحص','فحص الشجرة',()=>act(pb,check)),tool('+','تكبير',()=>{const r=box.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.25)}),tool('−','تصغير',()=>{const r=box.getBoundingClientRect();zoomAt(r.width/2,r.height/2,.8)}),tool('⤢','ملاءمة الشجرة',fit)),h('div',{style:'margin-top:6px'},status),hint),
+  bar,box));
+ draw();requestAnimationFrame(fit);
+ if(doc.nodes.length&&doc.nodes.some(n=>n.x==null))draw()});
 /* ---- boot ---- */
 async function boot(){
  const{data:{session}}=await sb.auth.getSession();
